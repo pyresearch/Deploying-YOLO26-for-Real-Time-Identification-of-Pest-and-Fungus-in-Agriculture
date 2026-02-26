@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unique AI-Powered Crop Disease Dashboard</title>
+    <link rel="icon" href="data:,">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        body { background: linear-gradient(to bottom, #e0f7fa, #f0f4f8); font-family: 'Segoe UI', sans-serif; }
+        .header { background: linear-gradient(135deg, #4caf50, #2196f3); color: white; padding: 3rem 0; text-align: center; border-radius: 0 0 30px 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .card { border: none; border-radius: 20px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); transition: transform 0.3s, box-shadow 0.3s; }
+        .card:hover { transform: translateY(-8px); box-shadow: 0 8px 25px rgba(0,0,0,0.2); }
+        .analytics-card { background: linear-gradient(to bottom right, #ffffff, #f8f9fa); padding: 2rem; text-align: center; }
+        .video-container { display: flex; gap: 25px; flex-wrap: wrap; justify-content: center; }
+        .video-box { flex: 1; min-width: 350px; max-width: 650px; }
+        #analyticsChart { max-height: 450px; }
+        .stat-number { font-size: 3rem; font-weight: bold; color: #4caf50; }
+        #outputSection { display: none; }
+        .section-title { position: relative; padding-bottom: 15px; font-weight: bold; }
+        .section-title::after { content: ''; position: absolute; bottom: 0; left: 0; width: 70px; height: 4px; background: linear-gradient(to right, #4caf50, #2196f3); border-radius: 2px; }
+        .btn-primary { background: linear-gradient(135deg, #4caf50, #2196f3); border: none; box-shadow: 0 4px 12px rgba(76,175,80,0.3); transition: background 0.3s; }
+        .btn-primary:hover { background: linear-gradient(135deg, #2196f3, #4caf50); }
+        .stat-icon { font-size: 2.5rem; color: #2196f3; margin-bottom: 15px; }
+        #scanHistory { display: none; }
+        .history-table { background: white; border-radius: 15px; overflow: hidden; }
+        .upload-section { margin-bottom: 30px; }
+        .alert { border-radius: 15px; }
+    </style>
+</head>
+<body>
+<div class="header">
+    <h1 class="display-3 fw-bold">AI-Enhanced Crop Guardian Dashboard</h1>
+    <p class="lead">Unique AI-Based Pest & Fungus Detection with Severity Analysis | Powered by  Advanced Analytics</p>
+</div>
+<div class="container my-5">
+    <!-- Video Upload Section (Unique Feature) -->
+    <div class="section mb-5 upload-section">
+        <h2 class="mb-4 text-primary section-title"><i class="bi bi-cloud-upload me-2"></i> Upload Your Video</h2>
+        <div class="card p-4">
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="mb-3">
+                    <label for="videoUpload" class="form-label">Select Video File (or use demo.mp4)</label>
+                    <input type="file" class="form-control" id="videoUpload" name="video" accept="video/*">
+                </div>
+                <button type="button" id="runDetectionBtn" class="btn btn-primary btn-lg w-100"><i class="bi bi-rocket-takeoff me-2"></i> Run AI Detection</button>
+            </form>
+            <p class="text-muted mt-3 text-center">Upload custom videos for personalized AI analysis</p>
+        </div>
+    </div>
+    <!-- Output Video Section -->
+    <div class="section mb-5" id="outputSection">
+        <h2 class="mb-4 text-primary section-title"><i class="bi bi-film me-2"></i> AI-Processed Output</h2>
+        <div class="video-container">
+            <div class="video-box card p-3">
+                <h5 class="card-title text-center mb-3">📹 Detection Results (with AI Annotations)</h5>
+                <video id="outputVideo" controls class="w-100 rounded" style="max-height: 400px;">
+                    <source id="outputSource" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <small class="text-muted d-block text-center mt-2">AI-detected pests, fungus, and severity highlights</small>
+            </div>
+        </div>
+    </div>
+    <!-- AI Analytics Dashboard -->
+    <div class="section">
+        <h2 class="mb-4 text-primary section-title"><i class="bi bi-graph-up-arrow me-2"></i> AI-Powered Analytics</h2>
+        <div class="row g-4 mb-5" id="statsRow">
+            <!-- JS will fill these -->
+        </div>
+        <div class="card p-4 mb-5">
+            <h5 class="mb-3">Detection Distribution (AI Insights)</h5>
+            <canvas id="analyticsChart"></canvas>
+        </div>
+        <!-- Unique Feature: Scan History Table -->
+        <div class="card p-4 history-table" id="scanHistory">
+            <h5 class="mb-3">Recent Scan History (Last 10 Scans)</h5>
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Pests</th>
+                        <th>Fungus</th>
+                        <th>Severity (%)</th>
+                    </tr>
+                </thead>
+                <tbody id="historyBody">
+                    <!-- JS will fill this -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let analyticsChart;
+    async function loadAnalytics() {
+        try {
+            const res = await fetch('/api/analytics');
+            const data = await res.json();
+            // Update stat cards with unique icons and gradients
+            const statsHTML = `
+                <div class="col-md-3">
+                    <div class="card analytics-card h-100">
+                        <div class="card-body">
+                            <i class="bi bi-shield-check stat-icon"></i>
+                            <h5 class="text-muted">AI Accuracy</h5>
+                            <div class="stat-number" id="accuracy">${data.accuracy}%</div>
+                            <small class="text-success">Advanced Model Performance</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card analytics-card h-100">
+                        <div class="card-body">
+                            <i class="bi bi-bug-fill stat-icon"></i>
+                            <h5 class="text-muted">Pests Detected</h5>
+                            <div class="stat-number" id="pests">${data.pests}</div>
+                            <small class="text-danger">Real-Time AI Counts</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card analytics-card h-100">
+                        <div class="card-body">
+                            <i class="bi bi-virus stat-icon"></i>
+                            <h5 class="text-muted">Fungus Detected</h5>
+                            <div class="stat-number" id="fungus">${data.fungus}</div>
+                            <small class="text-warning">AI-Identified Infections</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card analytics-card h-100">
+                        <div class="card-body">
+                            <i class="bi bi-search-heart stat-icon"></i>
+                            <h5 class="text-muted">Total AI Scans</h5>
+                            <div class="stat-number" id="scans">${data.scans}</div>
+                            <small class="text-info">Cumulative Insights</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('statsRow').innerHTML = statsHTML;
+            // Unique Chart: Polar Area for visual appeal
+            const ctx = document.getElementById('analyticsChart').getContext('2d');
+            if (analyticsChart) analyticsChart.destroy();
+            analyticsChart = new Chart(ctx, {
+                type: 'polarArea',
+                data: {
+                    labels: data.chart_labels,
+                    datasets: [{
+                        label: 'AI Detections',
+                        data: data.chart_data,
+                        backgroundColor: [
+                            'rgba(255, 193, 7, 0.7)', 'rgba(220, 53, 69, 0.7)', 'rgba(108, 117, 125, 0.7)', 'rgba(76, 175, 80, 0.7)'
+                        ],
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'top', labels: { color: '#333' } } },
+                    scales: { r: { beginAtZero: true, grid: { color: '#e9ecef' } } }
+                }
+            });
+            // Unique: Populate History Table
+            if (data.history && data.history.length > 0) {
+                let historyHTML = '';
+                data.history.forEach(scan => {
+                    historyHTML += `
+                        <tr>
+                            <td>${scan.timestamp}</td>
+                            <td>${scan.pests}</td>
+                            <td>${scan.fungus}</td>
+                            <td>${scan.severity}%</td>
+                        </tr>
+                    `;
+                });
+                document.getElementById('historyBody').innerHTML = historyHTML;
+                document.getElementById('scanHistory').style.display = 'block';
+            }
+        } catch (err) {
+            console.error("Analytics load failed", err);
+            alert("Backend issue? Check app.py!");
+        }
+    }
+    // Run Detection with Upload
+    document.getElementById('runDetectionBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('runDetectionBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-rocket-takeoff me-2"></i> AI Processing...';
+        
+        try {
+            const formData = new FormData(document.getElementById('uploadForm'));
+            const res = await fetch('/run_detection', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await res.json();
+            if (result.success) {
+                // Update output video
+                const outputVideo = document.getElementById('outputVideo');
+                const outputSource = document.getElementById('outputSource');
+                outputSource.src = "/output_video?" + new Date().getTime();
+                outputVideo.load();
+                outputVideo.play().catch(() => {}); // Attempt to play, ignore if blocked
+                document.getElementById('outputSection').style.display = 'block';
+                
+                // Reload analytics
+                await loadAnalytics();
+                
+                alert(`AI Detection Done! Pests: ${result.pests}, Fungus: ${result.fungus}, Severity: ${result.severity}%`);
+            } else {
+                alert(result.error || 'AI processing error');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error in AI detection');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-rocket-takeoff me-2"></i> Run AI Detection';
+        }
+    });
+    // Auto-load analytics
+    window.onload = loadAnalytics;
+</script>
+</body>
+</html>
